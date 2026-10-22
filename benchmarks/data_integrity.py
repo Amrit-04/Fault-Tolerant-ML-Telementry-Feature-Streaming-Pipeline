@@ -70,16 +70,21 @@ def run_producer(rate: int, duration: int, malformed_pct: float) -> dict:
         encoding="utf-8",
         errors="replace",
     )
-    # Parse summary from producer output (last JSON line)
+    # Parse summary from producer output
     summary = {}
     for line in (result.stdout + result.stderr).splitlines():
         if "Producer finished" in line:
             try:
                 # Extract JSON embedded in structured log
-                start = line.index("{")
-                summary = json.loads(line[start:])
-            except (ValueError, json.JSONDecodeError):
-                pass
+                outer = json.loads(line)
+                msg = outer.get("message", "")
+                if "{" in msg:
+                    summary = json.loads(msg[msg.index("{"):])
+            except Exception:
+                try:
+                    summary = json.loads(line[line.rfind("{"):])
+                except Exception:
+                    pass
     return summary
 
 
@@ -225,8 +230,8 @@ def run_integrity_benchmark():
 
     print("\n=== Integrity Report ===")
     for check, passed in checks.items():
-        status = "✓ PASS" if passed is True else ("? SKIP" if passed is None else "✗ FAIL")
-        print(f"  {status} — {check}")
+        status = "[PASS]" if passed is True else ("[SKIP]" if passed is None else "[FAIL]")
+        print(f"  {status} - {check}")
     print(f"\nOverall: {report['result']}")
     print(f"Results saved to: {output_path}")
 

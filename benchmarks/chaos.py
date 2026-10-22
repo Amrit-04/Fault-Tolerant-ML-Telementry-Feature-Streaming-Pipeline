@@ -221,10 +221,17 @@ def run_chaos_benchmark():
     for line in producer_output.splitlines():
         if "Producer finished" in line and "{" in line:
             try:
-                data = json.loads(line[line.index("{"):])
-                expected_valid = data.get("valid_produced", 0)
+                outer = json.loads(line)
+                msg = outer.get("message", "")
+                if "{" in msg:
+                    data = json.loads(msg[msg.index("{"):])
+                    expected_valid = data.get("valid_produced", 0)
             except Exception:
-                pass
+                try:
+                    data = json.loads(line[line.rfind("{"):])
+                    expected_valid = data.get("valid_produced", 0)
+                except Exception:
+                    pass
 
     # Wait for drain
     print("\nWaiting for consumers to drain...")
