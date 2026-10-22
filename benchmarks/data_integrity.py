@@ -67,6 +67,8 @@ def run_producer(rate: int, duration: int, malformed_pct: float) -> dict:
         cwd=COMPOSE_DIR,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
     # Parse summary from producer output (last JSON line)
     summary = {}
@@ -131,6 +133,8 @@ def count_dlq_messages() -> int:
             cwd=COMPOSE_DIR,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=15,
         )
         total = 0

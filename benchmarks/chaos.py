@@ -53,6 +53,8 @@ def docker_compose(args: list[str]) -> subprocess.CompletedProcess:
         cwd=COMPOSE_DIR,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 
@@ -77,6 +79,8 @@ def start_load_in_background() -> subprocess.Popen:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 

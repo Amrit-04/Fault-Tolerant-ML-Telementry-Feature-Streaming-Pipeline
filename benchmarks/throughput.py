@@ -79,6 +79,8 @@ def start_producer(rate: int, duration: int, malformed_pct: float = 5.0) -> subp
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 
@@ -88,7 +90,7 @@ def get_docker_stats() -> list[dict]:
         result = subprocess.run(
             ["docker", "stats", "--no-stream", "--format",
              "{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10,
         )
         rows = []
         for line in result.stdout.strip().splitlines():

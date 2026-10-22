@@ -70,6 +70,8 @@ def docker_compose(args: list[str]) -> subprocess.CompletedProcess:
         cwd=COMPOSE_DIR,
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
 
@@ -218,6 +220,8 @@ def run_single_config(partitions: int, consumers: int, batch_size: int) -> dict:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
     )
 
     # Sample metrics mid-run
