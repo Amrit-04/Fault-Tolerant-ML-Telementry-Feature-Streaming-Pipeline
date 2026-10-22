@@ -61,8 +61,11 @@ def sample_metrics() -> dict:
     }
 
 
-def start_producer(rate: int, duration: int, malformed_pct: float = 5.0) -> subprocess.Popen:
-    """Start the producer container."""
+def start_producer(rate: int, duration: int, malformed_pct: float = 5.0):
+    """Start the producer container with output redirected to a log file to avoid pipe deadlock."""
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    log_path = os.path.join(RESULTS_DIR, "producer_throughput.log")
+    log_file = open(log_path, "w", encoding="utf-8", errors="replace")
     cmd = [
         "docker", "compose",
         "--profile", "simulate",
@@ -73,15 +76,16 @@ def start_producer(rate: int, duration: int, malformed_pct: float = 5.0) -> subp
         "-e", "PRODUCER_ENTITY_CARDINALITY=100000",
         "producer",
     ]
-    return subprocess.Popen(
+    proc = subprocess.Popen(
         cmd,
         cwd=os.path.join(os.path.dirname(__file__), ".."),
-        stdout=subprocess.PIPE,
+        stdout=log_file,
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
+    return proc, log_file
 
 
 def get_docker_stats() -> list[dict]:
@@ -118,7 +122,7 @@ def run_throughput_benchmark():
     start_time = time.time()
 
     # Start the producer in the background
-    proc = start_producer(TARGET_RATE, DURATION, malformed_pct=5.0)
+    proc, log_file = start_producer(TARGET_RATE, DURATION, malformed_pct=5.0)
     print(f"Producer started (PID {proc.pid})")
 
     # Sample metrics while producer runs
@@ -145,6 +149,7 @@ def run_throughput_benchmark():
         time.sleep(1)
 
     proc.wait()
+    log_file.close()
 
     # Compute summary statistics
     if samples:

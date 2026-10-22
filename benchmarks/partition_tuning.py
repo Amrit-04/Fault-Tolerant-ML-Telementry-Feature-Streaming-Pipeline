@@ -205,6 +205,9 @@ def run_single_config(partitions: int, consumers: int, batch_size: int) -> dict:
 
     # 3. Main measurement run
     print(f"    Starting measurement run: {RATE} eps for {RUN_DURATION}s...")
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    tuning_log_path = os.path.join(RESULTS_DIR, f"producer_tuning_{partitions}_{consumers}_{batch_size}.log")
+    tuning_log_f = open(tuning_log_path, "w", encoding="utf-8", errors="replace")
     proc = subprocess.Popen(
         [
             "docker", "compose",
@@ -217,7 +220,7 @@ def run_single_config(partitions: int, consumers: int, batch_size: int) -> dict:
             "producer",
         ],
         cwd=COMPOSE_DIR,
-        stdout=subprocess.PIPE,
+        stdout=tuning_log_f,
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
@@ -241,6 +244,7 @@ def run_single_config(partitions: int, consumers: int, batch_size: int) -> dict:
         time.sleep(10)
 
     proc.wait()
+    tuning_log_f.close()
 
     if not samples:
         return {"config": label, "error": "no samples"}

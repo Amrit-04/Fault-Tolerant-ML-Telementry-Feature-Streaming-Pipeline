@@ -58,13 +58,16 @@ def docker_compose(args: list[str]) -> subprocess.CompletedProcess:
     )
 
 
-def start_load_in_background() -> subprocess.Popen:
-    """Start a long-running producer.
+def start_load_in_background():
+    """Start a long-running producer with log output saved to file to prevent pipe deadlock.
     
     Uses an explicit 5% malformed rate matching the production baseline simulation
     while injecting service restarts to verify zero valid data loss and proper DLQ isolation.
     """
-    return subprocess.Popen(
+    os.makedirs(RESULTS_DIR, exist_ok=True)
+    log_path = os.path.join(RESULTS_DIR, "producer_chaos.log")
+    log_f = open(log_path, "w", encoding="utf-8", errors="replace")
+    proc = subprocess.Popen(
         [
             "docker", "compose",
             "--profile", "simulate",
@@ -76,12 +79,13 @@ def start_load_in_background() -> subprocess.Popen:
             "producer",
         ],
         cwd=COMPOSE_DIR,
-        stdout=subprocess.PIPE,
+        stdout=log_f,
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
         errors="replace",
     )
+    return proc, log_f, log_path
 
 
 def count_postgres_rows() -> int:
@@ -186,7 +190,7 @@ def run_chaos_benchmark():
     print(f"Baseline Postgres rows: {baseline_rows}")
 
     # Start load
-    proc = start_load_in_background()
+    proc, log_f, log_path = start_load_in_background()
     print(f"Producer started (PID {proc.pid})")
     time.sleep(20)  # Let load build up
 
@@ -205,9 +209,14 @@ def run_chaos_benchmark():
     # Wait for producer to finish
     print("\nWaiting for producer to finish...")
     proc.wait()
+    log_f.close()
 
-    # Parse producer output
-    producer_output = proc.stdout.read() if proc.stdout else ""
+    # Parse producer output from log file
+    try:
+        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+            producer_output = f.read()
+    except Exception:
+        producer_output = ""
     expected_valid = 0
     for line in producer_output.splitlines():
         if "Producer finished" in line and "{" in line:
