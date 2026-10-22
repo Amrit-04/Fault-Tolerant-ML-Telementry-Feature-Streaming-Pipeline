@@ -49,10 +49,13 @@ def run_producer(rate: int, duration: int, malformed_pct: float, entity_cardinal
         cwd=COMPOSE_DIR,
         capture_output=True,
         text=True,
+        encoding='utf-8',
+        errors='replace',
         timeout=duration + 60,
     )
     summary = {}
-    for line in (result.stdout + result.stderr).splitlines():
+    output = (result.stdout or '') + (result.stderr or '')
+    for line in output.splitlines():
         if "Producer finished" in line and "{" in line:
             try:
                 start = line.index("{")
