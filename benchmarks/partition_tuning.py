@@ -4,7 +4,7 @@ Partition / Consumer Tuning Benchmark.
 Compares configurations:
   - partitions ∈ {1, 6, 12}
   - consumers (writer instances) ∈ {1, 3, 6}
-  - batch sizes ∈ {100, 500, 1000}
+  - batch sizes ∈ {250, 500, 1000}
 
 For each configuration, runs a short load test and measures:
   - Achieved throughput (events/sec consumed)
@@ -17,6 +17,7 @@ Output: benchmarks/results/tuning_<timestamp>.md + .json
 import json
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime, timezone
 from itertools import product
@@ -26,18 +27,21 @@ import httpx
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "..")
+POSTGRES_DSN = os.getenv("POSTGRES_DSN", "postgresql://pipeline:pipeline@localhost:5432/pipeline")
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 RATE = int(os.getenv("TUNING_RATE", "10000"))
-RUN_DURATION = int(os.getenv("TUNING_RUN_DURATION", "60"))
-SETTLE_TIME = 20  # seconds between runs
+RUN_DURATION = int(os.getenv("TUNING_RUN_DURATION", "45"))
+WARMUP_DURATION = int(os.getenv("TUNING_WARMUP_DURATION", "5"))
+SETTLE_TIME = int(os.getenv("TUNING_SETTLE_TIME", "10"))
 
-# Configurations to test
+# Full sweep by default
 PARTITION_OPTIONS = [1, 6, 12]
 CONSUMER_OPTIONS = [1, 3, 6]
-BATCH_SIZE_OPTIONS = [100, 500, 1000]
+BATCH_SIZE_OPTIONS = [250, 500, 1000]
 
-# For a quick benchmark, use a subset
-QUICK_MODE = os.getenv("QUICK_MODE", "1") == "1"
+# Opt-in quick mode for fast verification
+QUICK_MODE = os.getenv("QUICK_MODE", "0") == "1"
 if QUICK_MODE:
     PARTITION_OPTIONS = [6, 12]
     CONSUMER_OPTIONS = [1, 3]
@@ -71,6 +75,7 @@ def docker_compose(args: list[str]) -> subprocess.CompletedProcess:
 
 def recreate_topics(partitions: int):
     """Delete and recreate Kafka topics with given partition count."""
+    print(f"    Recreating topics with {partitions} partitions...")
     for topic in ["telemetry.raw", "telemetry.validated", "telemetry.dlq"]:
         docker_compose([
             "exec", "kafka",
@@ -87,19 +92,58 @@ def recreate_topics(partitions: int):
             "--partitions", str(partitions),
             "--replication-factor", "1",
         ])
+    dlq_partitions = os.getenv("KAFKA_DLQ_PARTITIONS", "3")
     docker_compose([
         "exec", "kafka",
         "kafka-topics", "--bootstrap-server", "localhost:29092",
         "--create", "--topic", "telemetry.dlq",
-        "--partitions", "3",
+        "--partitions", str(dlq_partitions),
         "--replication-factor", "1",
     ])
+    time.sleep(2)
+
+
+def reset_state():
+    """Reset PostgreSQL tables and Redis cache between runs."""
+    print("    Resetting PostgreSQL and Redis state...")
+    try:
+        import psycopg
+        with psycopg.connect(POSTGRES_DSN, autocommit=True, connect_timeout=5) as conn:
+            with conn.cursor() as cur:
+                cur.execute("TRUNCATE TABLE feature_events, entity_latest_features CASCADE;")
+    except Exception:
+        # Fallback via docker compose exec
+        docker_compose([
+            "exec", "postgres",
+            "psql", "-U", "pipeline", "-d", "pipeline",
+            "-c", "TRUNCATE TABLE feature_events, entity_latest_features CASCADE;",
+        ])
+
+    try:
+        import redis
+        client = redis.Redis.from_url(REDIS_URL, socket_connect_timeout=3)
+        client.flushdb()
+        client.close()
+    except Exception:
+        docker_compose(["exec", "redis", "redis-cli", "flushdb"])
+
+
+def reset_consumer_offsets():
+    """Reset offsets for pipeline consumer groups."""
+    for group in ["feature-writer-group", "validator-group"]:
+        docker_compose([
+            "exec", "kafka",
+            "kafka-consumer-groups", "--bootstrap-server", "localhost:29092",
+            "--group", group, "--reset-offsets", "--to-earliest", "--all-topics", "--execute",
+        ])
 
 
 def scale_writers(n: int, batch_size: int):
-    """Scale feature-writer instances."""
+    """Scale feature-writer instances and wait for consumer group to stabilise."""
+    print(f"    Scaling feature-writer to {n} instances (batch_size={batch_size})...")
     docker_compose(["stop", "feature-writer"])
     time.sleep(2)
+    docker_compose(["rm", "-f", "feature-writer"])
     subprocess.run(
         [
             "docker", "compose",
@@ -111,15 +155,54 @@ def scale_writers(n: int, batch_size: int):
         env={**os.environ, "WRITER_BATCH_SIZE": str(batch_size)},
         capture_output=True,
     )
-    time.sleep(5)
+    # Restart validator to ensure fresh subscription metadata
+    docker_compose(["restart", "validator"])
+    # Wait for rebalance to stabilise
+    print("    Waiting for consumer group to stabilise...")
+    time.sleep(10)
+
+
+def run_warmup(rate: int, duration: int = 5):
+    """Run a short warmup burst before measurement."""
+    print(f"    Running warm-up ({duration}s @ {rate} eps)...")
+    proc = subprocess.Popen(
+        [
+            "docker", "compose",
+            "--profile", "simulate",
+            "run", "--rm",
+            "-e", f"PRODUCER_RATE={rate}",
+            "-e", f"PRODUCER_DURATION={duration}",
+            "-e", "PRODUCER_MALFORMED_PCT=0",
+            "-e", "PRODUCER_ENTITY_CARDINALITY=10000",
+            "producer",
+        ],
+        cwd=COMPOSE_DIR,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    proc.wait()
+    time.sleep(3)
 
 
 def run_single_config(partitions: int, consumers: int, batch_size: int) -> dict:
-    """Run one configuration and measure performance."""
+    """Reconfigure the environment, run warm-up and load test, and measure performance."""
     label = f"p{partitions}_c{consumers}_b{batch_size}"
-    print(f"\n  Config: partitions={partitions}, consumers={consumers}, batch={batch_size}")
+    print(f"\n========================================================")
+    print(f"  Config: partitions={partitions}, consumers={consumers}, batch={batch_size}")
+    print(f"========================================================")
 
-    # Run short producer burst
+    # 1. Apply topology changes
+    recreate_topics(partitions)
+    reset_state()
+    scale_writers(consumers, batch_size)
+    reset_consumer_offsets()
+
+    # 2. Short warm-up burst
+    if WARMUP_DURATION > 0:
+        run_warmup(RATE, WARMUP_DURATION)
+
+    # 3. Main measurement run
+    print(f"    Starting measurement run: {RATE} eps for {RUN_DURATION}s...")
     proc = subprocess.Popen(
         [
             "docker", "compose",
@@ -175,7 +258,7 @@ def run_single_config(partitions: int, consumers: int, batch_size: int) -> dict:
         "write_p99_ms": round((sum(p99s) / len(p99s) if p99s else 0) * 1000, 1),
     }
 
-    print(f"    consume={result['avg_consume_rate_eps']} eps, "
+    print(f"    Result -> consume={result['avg_consume_rate_eps']} eps, "
           f"lag={result['peak_consumer_lag']}, "
           f"write_p99={result['write_p99_ms']}ms")
     return result
@@ -203,11 +286,14 @@ def run_partition_tuning():
     md_path = os.path.join(RESULTS_DIR, f"tuning_{timestamp}.md")
 
     print("=== Partition / Consumer Tuning Benchmark ===")
-    print(f"Configurations: {PARTITION_OPTIONS} partitions × {CONSUMER_OPTIONS} consumers × {BATCH_SIZE_OPTIONS} batch sizes")
-    print(f"Each run: {RATE} eps for {RUN_DURATION}s")
+    print(f"Sweep options:")
+    print(f"  Partitions:  {PARTITION_OPTIONS}")
+    print(f"  Consumers:   {CONSUMER_OPTIONS}")
+    print(f"  Batch sizes: {BATCH_SIZE_OPTIONS}")
+    print(f"Each run: {RATE} eps for {RUN_DURATION}s (warmup {WARMUP_DURATION}s)")
 
     configs = list(product(PARTITION_OPTIONS, CONSUMER_OPTIONS, BATCH_SIZE_OPTIONS))
-    print(f"Total configurations: {len(configs)}\n")
+    print(f"Total configurations to evaluate: {len(configs)}\n")
 
     all_results = []
     for partitions, consumers, batch_size in configs:
@@ -224,7 +310,7 @@ def run_partition_tuning():
             })
         time.sleep(SETTLE_TIME)
 
-    # Sort by avg consume rate
+    # Sort by avg consume rate descending
     all_results.sort(key=lambda r: r.get("avg_consume_rate_eps", 0), reverse=True)
 
     output = {
@@ -253,6 +339,10 @@ def run_partition_tuning():
         if "error" not in r:
             print(f"  p={r['partitions']} c={r['consumers']} b={r['batch_size']} "
                   f"-> {r['avg_consume_rate_eps']} eps avg, lag={r['peak_consumer_lag']}")
+
+    # Restore default writer scale (1 instance) after benchmark
+    print("\nRestoring default feature-writer scale (1 instance)...")
+    scale_writers(1, 500)
 
     return output
 

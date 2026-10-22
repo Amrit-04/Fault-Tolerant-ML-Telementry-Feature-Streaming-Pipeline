@@ -2,7 +2,7 @@
 # Fault-Tolerant ML Telemetry Pipeline — Makefile
 # =============================================================================
 
-.PHONY: up down logs simulate bench-throughput bench-latency \
+.PHONY: up down logs simulate bench-throughput bench-tuning bench-latency \
         bench-integrity bench-chaos bench-all test test-integration \
         build clean ps help
 
@@ -19,6 +19,7 @@ help:
 	@echo "  test               — Run unit tests"
 	@echo "  test-integration   — Run integration tests (requires 'make up' first)"
 	@echo "  bench-throughput   — Throughput benchmark (10K+ eps, 5+ min)"
+	@echo "  bench-tuning       — Partition / consumer group tuning benchmark"
 	@echo "  bench-latency      — Read latency benchmark (cache on/off)"
 	@echo "  bench-integrity    — Data integrity reconciliation"
 	@echo "  bench-chaos        — Chaos / fault-tolerance tests"
@@ -85,6 +86,10 @@ bench-throughput:
 	@echo "=== Throughput Benchmark (10K+ eps for 5+ min) ==="
 	python benchmarks/throughput.py
 
+bench-tuning:
+	@echo "=== Partition / Consumer Tuning Benchmark ==="
+	python benchmarks/partition_tuning.py
+
 bench-latency:
 	@echo "=== Read Latency Benchmark ==="
 	python benchmarks/read_latency.py
@@ -97,7 +102,7 @@ bench-chaos:
 	@echo "=== Chaos / Fault-Tolerance Tests ==="
 	python benchmarks/chaos.py
 
-bench-all: bench-integrity bench-throughput bench-latency bench-chaos
+bench-all: bench-integrity bench-throughput bench-tuning bench-latency bench-chaos
 	@echo "All benchmarks complete. Results in benchmarks/results/"
 
 # ---------------------------------------------------------------------------
