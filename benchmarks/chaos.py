@@ -57,7 +57,11 @@ def docker_compose(args: list[str]) -> subprocess.CompletedProcess:
 
 
 def start_load_in_background() -> subprocess.Popen:
-    """Start a long-running producer."""
+    """Start a long-running producer.
+    
+    Uses an explicit 5% malformed rate matching the production baseline simulation
+    while injecting service restarts to verify zero valid data loss and proper DLQ isolation.
+    """
     return subprocess.Popen(
         [
             "docker", "compose",

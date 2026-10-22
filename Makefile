@@ -14,7 +14,7 @@ help:
 	@echo "  logs               — Tail logs from all services"
 	@echo "  build              — Build all Docker images"
 	@echo "  ps                 — Show running containers"
-	@echo "  simulate           — Run the producer simulator (10K eps, 60s)"
+	@echo "  simulate           — Run the producer simulator (10K eps, 60s, 5% malformed)"
 	@echo "  simulate-fast      — Quick smoke test (1K eps, 10s)"
 	@echo "  test               — Run unit tests"
 	@echo "  test-integration   — Run integration tests (requires 'make up' first)"
@@ -63,7 +63,7 @@ simulate-fast:
 	docker compose --profile simulate run --rm \
 	  -e PRODUCER_RATE=1000 \
 	  -e PRODUCER_DURATION=10 \
-	  -e PRODUCER_MALFORMED_PCT=10 \
+	  -e PRODUCER_MALFORMED_PCT=$${PRODUCER_MALFORMED_PCT:-5} \
 	  -e PRODUCER_ENTITY_CARDINALITY=1000 \
 	  producer
 

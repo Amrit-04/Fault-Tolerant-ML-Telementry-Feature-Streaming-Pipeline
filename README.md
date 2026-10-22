@@ -1,6 +1,6 @@
 # Fault-Tolerant ML Telemetry & Feature Streaming Pipeline
 
-A production-style, event-driven streaming pipeline that ingests simulated ML telemetry, validates schemas, persists features, and serves them with sub-millisecond latency. Built entirely on open-source tooling and runnable locally with a single command.
+A production-style, event-driven streaming pipeline that ingests simulated ML telemetry, validates schemas, persists features, and serves them with low-latency caching. Built entirely on open-source tooling and runnable locally with a single command.
 
 ---
 
@@ -59,7 +59,7 @@ flowchart LR
 ```bash
 # 1. Clone and configure
 git clone <repo-url>
-cd Fault-Tolerant-ML-Telementary-Feature-Streaming-Pipeline
+cd Fault-Tolerant-ML-Telementry-Feature-Streaming-Pipeline
 cp .env.example .env
 
 # 2. Start everything
@@ -88,7 +88,7 @@ open http://localhost:9090   # Prometheus
 | Redis | `redis:7-alpine` | 6379 | Write-through feature cache, LRU eviction |
 | Producer | Python 3.11 | — | Generates 10K+ eps with configurable malformed % |
 | Validator | Python 3.11 | 8001 | JSON Schema validation, DLQ routing |
-| Feature Writer | Python 3.11 | 8002 | Batched Postgres writes + Redis cache updates |
+| Feature Writer | Python 3.11 | 8002 | Batched writes via psycopg3 pipelined executemany, 500 rows per batch + Redis write-through cache |
 | API | FastAPI / Python 3.11 | 8000 | Feature serving, Redis-first with PG fallback |
 | Prometheus | `prom/prometheus:v2.51.0` | 9090 | Metrics scraping + alerting |
 | Grafana | `grafana/grafana:10.4.0` | 3000 | Pre-provisioned dashboards |
@@ -187,6 +187,14 @@ Target: **≥ 10,000 events/sec** sustained. Results are saved to `benchmarks/re
 | Peak consumer lag | *run `make bench-throughput`* |
 | Final consumer lag | *run `make bench-throughput`* |
 
+### Consumer Group Tuning
+
+```bash
+make bench-tuning
+```
+
+Sweeps partition counts (1, 6, 12), writer consumer instances (1, 3, 6), and batch sizes (250, 500, 1000) with state resets between runs and warm-up bursts. Saves outputs to `benchmarks/results/tuning_<ts>.json` and `.md`.
+
 ### Read Latency (Cache ON vs OFF)
 
 ```bash
@@ -246,15 +254,27 @@ All configurable via environment variables (see `.env.example`):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `KAFKA_BOOTSTRAP_SERVERS` | `kafka:9092` | Kafka broker address |
-| `KAFKA_PARTITIONS` | `12` | Topic partition count |
+| `KAFKA_PARTITIONS` | `12` | Main topic partition count (`telemetry.raw`, `telemetry.validated`) |
+| `KAFKA_DLQ_PARTITIONS` | `3` | DLQ topic partition count (`telemetry.dlq`) |
 | `POSTGRES_DSN` | `postgresql://...` | PostgreSQL connection string |
 | `REDIS_URL` | `redis://redis:6379/0` | Redis connection URL |
 | `CACHE_ENABLED` | `true` | Enable Redis cache in API |
 | `CACHE_TTL_SECONDS` | `3600` | Redis key TTL |
 | `PRODUCER_RATE` | `10000` | Target events/sec |
 | `PRODUCER_DURATION` | `60` | Simulation duration (seconds) |
-| `PRODUCER_MALFORMED_PCT` | `0` | % of malformed events to inject |
+| `PRODUCER_MALFORMED_PCT` | `5` | Default % of malformed events to inject |
 | `WRITER_BATCH_SIZE` | `500` | Events per Postgres write batch |
+
+### Malformed Event Ingestion Ratios
+
+| Context | Malformed % | Rationale |
+|---------|:-----------:|-----------|
+| Default (`.env.example`) | `5%` | Standard baseline simulation representing realistic upstream dirty data. |
+| `make simulate` | `5%` | Full-rate traffic simulation (10K eps, 60s). |
+| `make simulate-fast` | `${PRODUCER_MALFORMED_PCT:-5}%` | Quick local smoke test (1K eps, 10s), defaulting to baseline. |
+| `bench-integrity` | `15%` | High-defect stress test to rigorously verify 100% DLQ routing and no corrupted rows in Postgres. |
+| `bench-chaos` | `5%` | Validates crash recovery and at-least-once idempotency under realistic mixed-event load. |
+| `bench-throughput` / `bench-tuning` | `0%` | Pure throughput/concurrency capacity testing of Kafka partitions and consumers. |
 
 ---
 

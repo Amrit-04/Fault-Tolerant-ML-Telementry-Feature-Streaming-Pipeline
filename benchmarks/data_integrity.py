@@ -25,7 +25,9 @@ POSTGRES_DSN = os.getenv("POSTGRES_DSN", "postgresql://pipeline:pipeline@localho
 PROMETHEUS_URL = os.getenv("PROMETHEUS_URL", "http://localhost:9090")
 COMPOSE_DIR = os.path.join(os.path.dirname(__file__), "..")
 
-# Integrity test parameters
+# Integrity test parameters:
+# Uses an explicit 15% malformed rate (higher than the 5% baseline) to heavily stress
+# the schema validator, Dead Letter Queue (DLQ) routing, and downstream deduplication under defect load.
 TEST_RATE = int(os.getenv("INTEGRITY_RATE", "5000"))
 TEST_DURATION = int(os.getenv("INTEGRITY_DURATION", "60"))
 TEST_MALFORMED_PCT = float(os.getenv("INTEGRITY_MALFORMED_PCT", "15.0"))
