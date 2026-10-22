@@ -31,16 +31,15 @@ ZIPF_SKEW = float(os.getenv("ZIPF_SKEW", "1.2"))
 WARMUP_REQUESTS = int(os.getenv("WARMUP_REQUESTS", "500"))
 
 
+def generate_zipfian_indices(n: int, k: int, skew: float = 1.2) -> list[int]:
+    """Precomputed inverse-power weights for fast Zipfian sampling."""
+    weights = [1.0 / (i ** skew) for i in range(1, n + 1)]
+    return random.choices(range(n), weights=weights, k=k)
+
+
 def zipfian_sample(n: int, skew: float = 1.2) -> int:
     """Return a Zipfian-distributed integer in [0, n)."""
-    # Normalizing constant (precomputed for efficiency in practice)
-    # Using rejection sampling: pick uniformly, accept with Zipf probability
-    max_prob = 1.0  # rank 1 always accepted
-    while True:
-        rank = random.randint(1, n)
-        prob = (1.0 / rank ** skew) / max_prob
-        if random.random() < prob:
-            return rank - 1
+    return generate_zipfian_indices(n, 1, skew)[0]
 
 
 def generate_entity_id(idx: int) -> str:
@@ -101,11 +100,9 @@ async def benchmark_with_cache_setting(cache_enabled: bool) -> dict:
     print(f"\nRunning load test ({label})...")
     print(f"  Requests: {TOTAL_REQUESTS}, Concurrency: {CONCURRENCY}")
 
-    # Build Zipfian-distributed entity IDs
-    zipf_entities = []
-    for _ in range(TOTAL_REQUESTS + WARMUP_REQUESTS):
-        idx = zipfian_sample(ENTITY_CARDINALITY, ZIPF_SKEW)
-        zipf_entities.append(generate_entity_id(idx))
+    # Build Zipfian-distributed entity IDs via weighted choice
+    indices = generate_zipfian_indices(ENTITY_CARDINALITY, TOTAL_REQUESTS + WARMUP_REQUESTS, ZIPF_SKEW)
+    zipf_entities = [generate_entity_id(idx) for idx in indices]
 
     warmup_entities = zipf_entities[:WARMUP_REQUESTS]
     test_entities = zipf_entities[WARMUP_REQUESTS:]
