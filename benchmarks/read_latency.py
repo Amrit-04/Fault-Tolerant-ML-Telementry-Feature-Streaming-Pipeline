@@ -69,16 +69,16 @@ async def run_requests(
     async def single_request():
         nonlocal success, errors
         eid = random.choice(entity_ids)
-        t0 = time.monotonic()
         try:
             async with semaphore:
+                t0 = time.monotonic()
                 resp = await client.get(f"{API_URL}/features/{eid}", timeout=10.0)
-            latency = time.monotonic() - t0
-            latencies.append(latency * 1000)  # convert to ms
-            if resp.status_code in (200, 404):
-                success += 1
-            else:
-                errors += 1
+                latency = time.monotonic() - t0
+                latencies.append(latency * 1000)  # convert to ms
+                if resp.status_code in (200, 404):
+                    success += 1
+                else:
+                    errors += 1
         except Exception:
             errors += 1
 
