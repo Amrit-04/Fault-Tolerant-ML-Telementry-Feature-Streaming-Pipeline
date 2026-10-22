@@ -30,10 +30,10 @@ Thumbs.db
 # Docker
 docker-compose.override.yml
 
-# Benchmark results (keep .gitkeep)
-benchmarks/results/*.json
-benchmarks/results/*.md
-benchmarks/results/*.csv
+# Benchmark results (track evidence json/md, ignore raw logs)
+benchmarks/results/*.log
+!benchmarks/results/*.json
+!benchmarks/results/*.md
 !benchmarks/results/.gitkeep
 
 # Logs

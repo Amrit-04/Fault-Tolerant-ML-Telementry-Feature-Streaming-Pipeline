@@ -1,0 +1,20 @@
+{
+  "cache_enabled": true,
+  "requests": 10000,
+  "concurrency": 50,
+  "elapsed_seconds": 73.05,
+  "rps": 136.9,
+  "success": 10000,
+  "errors": 0,
+  "p50_ms": 249.63,
+  "p95_ms": 1028.05,
+  "p99_ms": 1575.45,
+  "p999_ms": 2365.39,
+  "mean_ms": 356.02,
+  "min_ms": 14.83,
+  "max_ms": 4258.3,
+  "timestamp": "20261022T155818",
+  "api_url": "http://localhost:8000",
+  "zipf_skew": 1.2,
+  "entity_cardinality": 100000
+}

@@ -1,0 +1,31 @@
+{
+  "benchmark": "data_integrity",
+  "timestamp": "20261022T160530",
+  "parameters": {
+    "rate_eps": 5000,
+    "duration_seconds": 60,
+    "malformed_pct": 15.0
+  },
+  "producer": {
+    "total_produced": 296250,
+    "valid_produced": 251757,
+    "malformed_produced": 44493
+  },
+  "postgres": {
+    "new_rows": 251757,
+    "duplicate_rows": 0,
+    "entity_count": 79671
+  },
+  "dlq": {
+    "new_messages": 44493,
+    "expected_malformed": 44493
+  },
+  "checks": {
+    "zero_duplicates": true,
+    "valid_events_in_postgres": true,
+    "malformed_events_in_dlq": true,
+    "no_valid_events_lost": true,
+    "consumers_drained": true
+  },
+  "result": "PASS"
+}

@@ -1,0 +1,342 @@
+{
+  "benchmark": "throughput",
+  "timestamp": "20261022T151428",
+  "target_rate_eps": 10000,
+  "duration_seconds": 310,
+  "total_elapsed_seconds": 322.9,
+  "achieved_peak_consume_rate_eps": 7891.5,
+  "achieved_avg_consume_rate_eps": 7116.6,
+  "achieved_avg_write_rate_eps": 4425.6,
+  "peak_consumer_lag": 1563567.0,
+  "final_consumer_lag": 1563567.0,
+  "sustained_10k_eps": false,
+  "samples": [
+    {
+      "ts": 1792682078.2299905,
+      "validator_consumed_rate": 0.0,
+      "validator_validated_rate": 0.0,
+      "validator_rejected_rate": 0.0,
+      "writer_write_rate": 0.0,
+      "consumer_lag_total": 0.0,
+      "writer_p99_write_latency": NaN
+    },
+    {
+      "ts": 1792682089.043422,
+      "validator_consumed_rate": 2466.6476444444443,
+      "validator_validated_rate": 2378.24048,
+      "validator_rejected_rate": 0.0,
+      "writer_write_rate": 1496.72216,
+      "consumer_lag_total": 110005.0,
+      "writer_p99_write_latency": 0.2482
+    },
+    {
+      "ts": 1792682099.8457956,
+      "validator_consumed_rate": 5251.397702069027,
+      "validator_validated_rate": 5047.711014067605,
+      "validator_rejected_rate": 266.5881036513545,
+      "writer_write_rate": 2347.4050111111114,
+      "consumer_lag_total": 197906.0,
+      "writer_p99_write_latency": 0.2482407107165639
+    },
+    {
+      "ts": 1792682110.5515625,
+      "validator_consumed_rate": 6529.501966797787,
+      "validator_validated_rate": 6201.88012534169,
+      "validator_rejected_rate": 327.6218414560971,
+      "writer_write_rate": 3700.4933991198823,
+      "consumer_lag_total": 197906.0,
+      "writer_p99_write_latency": 0.24826562500000002
+    },
+    {
+      "ts": 1792682121.1597517,
+      "validator_consumed_rate": 6318.333333333333,
+      "validator_validated_rate": 5993.4,
+      "validator_rejected_rate": 324.93333333333334,
+      "writer_write_rate": 4199.720018665422,
+      "consumer_lag_total": 285455.0,
+      "writer_p99_write_latency": 0.24747334873090363
+    },
+    {
+      "ts": 1792682131.9756851,
+      "validator_consumed_rate": 6871.116148819842,
+      "validator_validated_rate": 6540.738765168689,
+      "validator_rejected_rate": 330.3773836511535,
+      "writer_write_rate": 4400.880176035207,
+      "consumer_lag_total": 365636.0,
+      "writer_p99_write_latency": 0.24685714285714286
+    },
+    {
+      "ts": 1792682142.6430137,
+      "validator_consumed_rate": 6871.116148819842,
+      "validator_validated_rate": 6540.738765168689,
+      "validator_rejected_rate": 330.3773836511535,
+      "writer_write_rate": 4400.880176035207,
+      "consumer_lag_total": 365636.0,
+      "writer_p99_write_latency": 0.24685714285714286
+    },
+    {
+      "ts": 1792682153.2966242,
+      "validator_consumed_rate": 7413.360890726049,
+      "validator_validated_rate": 7040.1360090672715,
+      "validator_rejected_rate": 373.2248816587773,
+      "writer_write_rate": 4599.693353776414,
+      "consumer_lag_total": 430377.0,
+      "writer_p99_write_latency": 0.24495121951219512
+    },
+    {
+      "ts": 1792682163.867528,
+      "validator_consumed_rate": 7053.6702446829795,
+      "validator_validated_rate": 6697.846523101541,
+      "validator_rejected_rate": 355.8237215814388,
+      "writer_write_rate": 4666.977798519902,
+      "consumer_lag_total": 507982.0,
+      "writer_p99_write_latency": 0.24432432432432427
+    },
+    {
+      "ts": 1792682174.3990066,
+      "validator_consumed_rate": 0.0,
+      "validator_validated_rate": 7070.933333333333,
+      "validator_rejected_rate": 380.0,
+      "writer_write_rate": 4666.977798519902,
+      "consumer_lag_total": 507982.0,
+      "writer_p99_write_latency": 0.24432432432432427
+    },
+    {
+      "ts": 1792682184.9011009,
+      "validator_consumed_rate": 7450.933333333333,
+      "validator_validated_rate": 7070.933333333333,
+      "validator_rejected_rate": 380.0,
+      "writer_write_rate": 4766.984465631042,
+      "consumer_lag_total": 577519.0,
+      "writer_p99_write_latency": 0.2440416666666667
+    },
+    {
+      "ts": 1792682195.4586616,
+      "validator_consumed_rate": 7439.162610840724,
+      "validator_validated_rate": 7064.53763584239,
+      "validator_rejected_rate": 374.62497499833324,
+      "writer_write_rate": 4833.655577038469,
+      "consumer_lag_total": 645805.0,
+      "writer_p99_write_latency": 0.24320312500000005
+    },
+    {
+      "ts": 1792682205.9736826,
+      "validator_consumed_rate": 7493.167122191854,
+      "validator_validated_rate": 7126.658222785148,
+      "validator_rejected_rate": 366.50889940670623,
+      "writer_write_rate": 4900.326688445897,
+      "consumer_lag_total": 715248.0,
+      "writer_p99_write_latency": 0.24081249999999993
+    },
+    {
+      "ts": 1792682216.469772,
+      "validator_consumed_rate": 7493.167122191854,
+      "validator_validated_rate": 7126.658222785148,
+      "validator_rejected_rate": 366.50889940670623,
+      "writer_write_rate": 4900.326688445897,
+      "consumer_lag_total": 715248.0,
+      "writer_p99_write_latency": 0.24081249999999993
+    },
+    {
+      "ts": 1792682226.9776728,
+      "validator_consumed_rate": 7644.528905781156,
+      "validator_validated_rate": 7257.718210308728,
+      "validator_rejected_rate": 386.8106954724278,
+      "writer_write_rate": 4866.666666666667,
+      "consumer_lag_total": 784976.0,
+      "writer_p99_write_latency": 0.240875
+    },
+    {
+      "ts": 1792682237.4719555,
+      "validator_consumed_rate": 7616.266666666666,
+      "validator_validated_rate": 7227.733333333334,
+      "validator_rejected_rate": 388.5333333333333,
+      "writer_write_rate": 4812.454163610908,
+      "consumer_lag_total": 854086.0,
+      "writer_p99_write_latency": 0.23964285714285724
+    },
+    {
+      "ts": 1792682247.9991217,
+      "validator_consumed_rate": 7616.266666666666,
+      "validator_validated_rate": 7227.733333333334,
+      "validator_rejected_rate": 388.5333333333333,
+      "writer_write_rate": 4812.454163610908,
+      "consumer_lag_total": 854086.0,
+      "writer_p99_write_latency": 0.23964285714285724
+    },
+    {
+      "ts": 1792682258.6268554,
+      "validator_consumed_rate": 7512.068275770102,
+      "validator_validated_rate": 7138.285104680624,
+      "validator_rejected_rate": 373.78317108947857,
+      "writer_write_rate": 4800.320021334756,
+      "consumer_lag_total": 920598.0,
+      "writer_p99_write_latency": 0.24303225806451612
+    },
+    {
+      "ts": 1792682269.1209886,
+      "validator_consumed_rate": 7623.0,
+      "validator_validated_rate": 7235.733333333334,
+      "validator_rejected_rate": 387.26666666666665,
+      "writer_write_rate": 4900.0,
+      "consumer_lag_total": 991654.0,
+      "writer_p99_write_latency": 0.23949999999999994
+    },
+    {
+      "ts": 1792682279.5936449,
+      "validator_consumed_rate": 7730.830777436991,
+      "validator_validated_rate": 7338.445126016802,
+      "validator_rejected_rate": 392.38565142018933,
+      "writer_write_rate": 4900.0,
+      "consumer_lag_total": 991654.0,
+      "writer_p99_write_latency": 0.23949999999999994
+    },
+    {
+      "ts": 1792682290.0654194,
+      "validator_consumed_rate": 7730.830777436991,
+      "validator_validated_rate": 7338.445126016802,
+      "validator_rejected_rate": 392.38565142018933,
+      "writer_write_rate": 4667.600186704007,
+      "consumer_lag_total": 1062425.0,
+      "writer_p99_write_latency": 0.24363636363636357
+    },
+    {
+      "ts": 1792682300.5820124,
+      "validator_consumed_rate": 7891.533333333335,
+      "validator_validated_rate": 7497.466666666666,
+      "validator_rejected_rate": 394.06666666666666,
+      "writer_write_rate": 4200.0,
+      "consumer_lag_total": 1140382.0,
+      "writer_p99_write_latency": 0.247375
+    },
+    {
+      "ts": 1792682311.1241782,
+      "validator_consumed_rate": 7707.780518701247,
+      "validator_validated_rate": 7320.554703646909,
+      "validator_rejected_rate": 387.225815054337,
+      "writer_write_rate": 4633.642242816188,
+      "consumer_lag_total": 1211170.0,
+      "writer_p99_write_latency": 0.24420833333333333
+    },
+    {
+      "ts": 1792682321.5945275,
+      "validator_consumed_rate": 7707.780518701247,
+      "validator_validated_rate": 7320.554703646911,
+      "validator_rejected_rate": 387.225815054337,
+      "writer_write_rate": 4633.642242816188,
+      "consumer_lag_total": 1211170.0,
+      "writer_p99_write_latency": 0.24420833333333333
+    },
+    {
+      "ts": 1792682332.1911244,
+      "validator_consumed_rate": 7639.133333333333,
+      "validator_validated_rate": 7261.4,
+      "validator_rejected_rate": 377.73333333333335,
+      "writer_write_rate": 4699.686687554163,
+      "consumer_lag_total": 1279588.0,
+      "writer_p99_write_latency": 0.24339062499999994
+    },
+    {
+      "ts": 1792682342.880852,
+      "validator_consumed_rate": 7074.876650220029,
+      "validator_validated_rate": 6713.4951326843575,
+      "validator_rejected_rate": 361.38151753567143,
+      "writer_write_rate": 4500.9001800360065,
+      "consumer_lag_total": 1356132.0,
+      "writer_p99_write_latency": 0.24569148936170213
+    },
+    {
+      "ts": 1792682353.8383899,
+      "validator_consumed_rate": 7074.876650220029,
+      "validator_validated_rate": 7198.346556437096,
+      "validator_rejected_rate": 374.4916327755184,
+      "writer_write_rate": 4500.9001800360065,
+      "consumer_lag_total": 1430498.0,
+      "writer_p99_write_latency": 0.24322580645161287
+    },
+    {
+      "ts": 1792682364.573991,
+      "validator_consumed_rate": 7572.838189212614,
+      "validator_validated_rate": 7198.346556437096,
+      "validator_rejected_rate": 374.4916327755184,
+      "writer_write_rate": 4666.666666666667,
+      "consumer_lag_total": 1430498.0,
+      "writer_p99_write_latency": 0.24322580645161287
+    },
+    {
+      "ts": 1792682375.382439,
+      "validator_consumed_rate": 7235.066666666667,
+      "validator_validated_rate": 6873.533333333333,
+      "validator_rejected_rate": 361.5333333333333,
+      "writer_write_rate": 4467.2623016402185,
+      "consumer_lag_total": 1502970.0,
+      "writer_p99_write_latency": 0.24627777777777776
+    },
+    {
+      "ts": 1792682386.0677168,
+      "validator_consumed_rate": 7235.066666666667,
+      "validator_validated_rate": 6873.800000000001,
+      "validator_rejected_rate": 361.26666666666665,
+      "writer_write_rate": 4399.7066862209185,
+      "consumer_lag_total": 1563567.0,
+      "writer_p99_write_latency": 0.24611764705882352
+    }
+  ],
+  "docker_stats": [
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-validator-1",
+      "cpu_pct": "100.67%",
+      "mem_usage": "137.6MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-grafana-1",
+      "cpu_pct": "0.06%",
+      "mem_usage": "50.46MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-prometheus-1",
+      "cpu_pct": "0.00%",
+      "mem_usage": "88.7MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-feature-writer-1",
+      "cpu_pct": "49.01%",
+      "mem_usage": "138.5MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-postgres-exporter-1",
+      "cpu_pct": "0.00%",
+      "mem_usage": "13.88MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-api-1",
+      "cpu_pct": "0.10%",
+      "mem_usage": "46.52MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-redis-exporter-1",
+      "cpu_pct": "0.00%",
+      "mem_usage": "9.434MiB / 9.713GiB"
+    },
+    {
+      "container": "fault-tolerant-ml-telementary-feature-streaming-pipeline-kafka-exporter-1",
+      "cpu_pct": "0.00%",
+      "mem_usage": "10.18MiB / 9.713GiB"
+    },
+    {
+      "container": "postgres",
+      "cpu_pct": "85.79%",
+      "mem_usage": "619.5MiB / 9.713GiB"
+    },
+    {
+      "container": "redis",
+      "cpu_pct": "2.84%",
+      "mem_usage": "56.03MiB / 9.713GiB"
+    },
+    {
+      "container": "kafka",
+      "cpu_pct": "14.59%",
+      "mem_usage": "1.409GiB / 9.713GiB"
+    }
+  ]
+}

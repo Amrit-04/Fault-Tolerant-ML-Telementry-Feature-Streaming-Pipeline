@@ -1,0 +1,38 @@
+{
+  "benchmark": "chaos",
+  "timestamp": "20261022T160712",
+  "load": {
+    "rate_eps": 8000,
+    "duration_seconds": 120
+  },
+  "chaos_scenarios": [
+    {
+      "test": "kill_writer",
+      "rows_at_kill": 749207,
+      "writer_recovered": true
+    },
+    {
+      "test": "restart_postgres",
+      "rows_before": 860207,
+      "rows_after": 898707,
+      "postgres_recovered": true,
+      "data_lost": 0
+    },
+    {
+      "test": "restart_redis",
+      "redis_recovered": true,
+      "note": "Redis is a cache \u2014 data loss is acceptable; Postgres is source of truth"
+    }
+  ],
+  "final_reconciliation": {
+    "baseline_rows": 670706,
+    "final_rows": 1571175,
+    "new_rows": 900469,
+    "expected_valid": 900469,
+    "duplicate_rows": 0,
+    "consumers_drained": true,
+    "zero_duplicates": true,
+    "zero_data_loss": true
+  },
+  "result": "PASS"
+}
