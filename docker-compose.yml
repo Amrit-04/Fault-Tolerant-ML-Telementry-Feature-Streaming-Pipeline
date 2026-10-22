@@ -1,0 +1,257 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Kafka (KRaft mode — no ZooKeeper)
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093,HOST://0.0.0.0:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+      KAFKA_NUM_PARTITIONS: ${KAFKA_PARTITIONS:-12}
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    volumes:
+      - kafka-data:/tmp/kraft-combined-logs
+    healthcheck:
+      test: kafka-broker-api-versions --bootstrap-server localhost:29092 || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # Topic initialization
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Creating Kafka topics...'
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+        --topic telemetry.raw --partitions $${KAFKA_PARTITIONS:-12} --replication-factor 1
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+        --topic telemetry.validated --partitions $${KAFKA_PARTITIONS:-12} --replication-factor 1
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists \
+        --topic telemetry.dlq --partitions 3 --replication-factor 1
+      echo 'Topics created:'
+      kafka-topics --bootstrap-server kafka:29092 --list
+      "
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pipeline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pipeline}
+      POSTGRES_DB: ${POSTGRES_DB:-pipeline}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER:-pipeline}
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Redis
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    hostname: redis
+    container_name: redis
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: redis-cli ping | grep PONG
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ---------------------------------------------------------------------------
+  # Producer Simulator
+  # ---------------------------------------------------------------------------
+  producer:
+    build:
+      context: .
+      dockerfile: producer/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      PRODUCER_RATE: ${PRODUCER_RATE:-10000}
+      PRODUCER_DURATION: ${PRODUCER_DURATION:-60}
+      PRODUCER_MALFORMED_PCT: ${PRODUCER_MALFORMED_PCT:-0}
+      PRODUCER_ENTITY_CARDINALITY: ${PRODUCER_ENTITY_CARDINALITY:-100000}
+      PRODUCER_BURST_MULTIPLIER: ${PRODUCER_BURST_MULTIPLIER:-1.0}
+      PRODUCER_NUM_FEATURES: ${PRODUCER_NUM_FEATURES:-10}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+    profiles:
+      - simulate
+
+  # ---------------------------------------------------------------------------
+  # Schema Validator
+  # ---------------------------------------------------------------------------
+  validator:
+    build:
+      context: .
+      dockerfile: validator/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    ports:
+      - "8001:8001"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      VALIDATOR_MAX_POLL_RECORDS: ${VALIDATOR_MAX_POLL_RECORDS:-1000}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+  # ---------------------------------------------------------------------------
+  # Feature Writer
+  # ---------------------------------------------------------------------------
+  feature-writer:
+    build:
+      context: .
+      dockerfile: writer/Dockerfile
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8002:8002"
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      POSTGRES_DSN: postgresql://pipeline:pipeline@postgres:5432/pipeline
+      REDIS_URL: redis://redis:6379/0
+      WRITER_BATCH_SIZE: ${WRITER_BATCH_SIZE:-500}
+      WRITER_MAX_POLL_RECORDS: ${WRITER_MAX_POLL_RECORDS:-1000}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-3600}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+  # ---------------------------------------------------------------------------
+  # Feature Serving API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    environment:
+      POSTGRES_DSN: postgresql://pipeline:pipeline@postgres:5432/pipeline
+      REDIS_URL: redis://redis:6379/0
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-3600}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+
+  # ---------------------------------------------------------------------------
+  # Observability
+  # ---------------------------------------------------------------------------
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.7.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command:
+      - --kafka.server=kafka:29092
+    ports:
+      - "9308:9308"
+
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_SOURCE_NAME: postgresql://pipeline:pipeline@postgres:5432/pipeline?sslmode=disable
+    ports:
+      - "9187:9187"
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.58.0
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    ports:
+      - "9121:9121"
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/alerting_rules.yml:/etc/prometheus/alerting_rules.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=7d
+    depends_on:
+      - kafka-exporter
+      - postgres-exporter
+      - redis-exporter
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
+volumes:
+  kafka-data:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Benchmark results (keep .gitkeep)
+benchmarks/results/*.json
+benchmarks/results/*.md
+benchmarks/results/*.csv
+!benchmarks/results/.gitkeep
+
+# Logs
+*.log
+logs/
