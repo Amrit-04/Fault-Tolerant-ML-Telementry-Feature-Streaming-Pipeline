@@ -58,7 +58,7 @@ flowchart LR
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/<username>/Fault-Tolerant-ML-Telementary-Feature-Streaming-Pipeline.git
+git clone https://github.com/Amrit-04/Fault-Tolerant-ML-Telementary-Feature-Streaming-Pipeline.git
 cd Fault-Tolerant-ML-Telementary-Feature-Streaming-Pipeline
 cp .env.example .env
 
