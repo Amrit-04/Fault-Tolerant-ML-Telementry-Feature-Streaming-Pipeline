@@ -151,6 +151,10 @@ class SchemaValidator:
         while not self.shutdown.is_set():
             msg = self.consumer.poll(timeout=1.0)
             if msg is None:
+                if self._pending_offsets:
+                    self.producer.flush(timeout=5)
+                    self._commit_offsets()
+                    last_commit_time = time.monotonic()
                 continue
 
             if msg.error():
