@@ -1,0 +1,6 @@
+fastapi==0.110.2
+uvicorn[standard]==0.29.0
+psycopg[binary]==3.1.18
+redis==5.0.3
+prometheus-client==0.20.0
+pydantic==2.7.1
