@@ -123,6 +123,37 @@ class TestGetFeatures:
         resp = c.get("/features/entity-001")
         assert "source" in resp.json()
 
+    def test_source_cache_on_hit(self, client):
+        c, cache = client
+        data = make_feature_data("entity-001")
+        data["source"] = "cache"
+        cache.get_features.return_value = data
+
+        resp = c.get("/features/entity-001")
+        assert resp.status_code == 200
+        assert resp.json()["source"] == "cache"
+
+    def test_source_database_on_miss(self, client):
+        c, cache = client
+        data = make_feature_data("entity-001")
+        data["source"] = "database"
+        cache.get_features.return_value = data
+
+        resp = c.get("/features/entity-001")
+        assert resp.status_code == 200
+        assert resp.json()["source"] == "database"
+
+    def test_source_database_when_cache_disabled(self, client):
+        c, cache = client
+        cache.cache_enabled = False
+        data = make_feature_data("entity-001")
+        data["source"] = "database"
+        cache.get_features.return_value = data
+
+        resp = c.get("/features/entity-001")
+        assert resp.status_code == 200
+        assert resp.json()["source"] == "database"
+
     def test_entity_id_passed_to_cache(self, client):
         c, cache = client
         cache.get_features.return_value = None
@@ -238,6 +269,58 @@ class TestMetricsEndpoint:
         c, cache = client
         resp = c.get("/metrics")
         assert len(resp.content) > 0
+
+
+# ---------------------------------------------------------------------------
+# FeatureCache Unit Tests (Hit, Miss, Cache-Disabled)
+# ---------------------------------------------------------------------------
+
+class TestFeatureCacheSourceResolution:
+    def test_cache_hit_returns_source_cache(self):
+        from api.cache import FeatureCache
+        cache = FeatureCache(redis_url="redis://localhost:6379/0", postgres_dsn="fake", cache_enabled=True)
+        cache._redis = MagicMock()
+        cache._redis_get = MagicMock(return_value={
+            "entity_id": "e-1", "event_id": str(uuid.uuid4()),
+            "timestamp": "2026-10-22T00:00:00Z", "feature_vector": [0.1] * 8
+        })
+        cache._pg_get = MagicMock()
+
+        res = cache.get_features("e-1")
+        assert res is not None
+        assert res["source"] == "cache"
+        cache._pg_get.assert_not_called()
+
+    def test_cache_miss_returns_source_database(self):
+        from api.cache import FeatureCache
+        cache = FeatureCache(redis_url="redis://localhost:6379/0", postgres_dsn="fake", cache_enabled=True)
+        cache._redis = MagicMock()
+        cache._redis_get = MagicMock(return_value=None)
+        cache._pg_get = MagicMock(return_value={
+            "entity_id": "e-1", "event_id": str(uuid.uuid4()),
+            "timestamp": "2026-10-22T00:00:00Z", "feature_vector": [0.1] * 8
+        })
+        cache._redis_set = MagicMock()
+
+        res = cache.get_features("e-1")
+        assert res is not None
+        assert res["source"] == "database"
+        cache._redis_set.assert_called_once()
+
+    def test_cache_disabled_returns_source_database(self):
+        from api.cache import FeatureCache
+        cache = FeatureCache(redis_url="redis://localhost:6379/0", postgres_dsn="fake", cache_enabled=False)
+        cache._redis = None
+        cache._redis_get = MagicMock()
+        cache._pg_get = MagicMock(return_value={
+            "entity_id": "e-1", "event_id": str(uuid.uuid4()),
+            "timestamp": "2026-10-22T00:00:00Z", "feature_vector": [0.1] * 8
+        })
+
+        res = cache.get_features("e-1")
+        assert res is not None
+        assert res["source"] == "database"
+        cache._redis_get.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

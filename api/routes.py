@@ -68,7 +68,10 @@ async def get_features(entity_id: str, request: Request):
         ).observe(latency)
         raise HTTPException(status_code=404, detail=f"Entity '{entity_id}' not found")
 
-    source = "cache" if cache.cache_enabled else "database"
+    source = data.get("source")
+    if not source:
+        source = "database" if not getattr(cache, "cache_enabled", True) else "cache"
+
     m.REQUEST_LATENCY.labels(
         method="GET",
         endpoint="/features/{entity_id}",
@@ -105,12 +108,15 @@ async def get_features_batch(body: BatchRequest, request: Request):
 
     for eid, data in results_raw.items():
         if data is not None:
+            source = data.get("source")
+            if not source:
+                source = "database" if not getattr(cache, "cache_enabled", True) else "cache"
             results[eid] = FeatureResponse(
                 entity_id=data["entity_id"],
                 event_id=str(data["event_id"]),
                 timestamp=str(data["timestamp"]),
                 feature_vector=list(data["feature_vector"]),
-                source="cache" if cache.cache_enabled else "database",
+                source=source,
             )
             found += 1
         else:

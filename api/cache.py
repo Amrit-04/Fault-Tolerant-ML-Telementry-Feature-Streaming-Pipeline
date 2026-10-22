@@ -101,15 +101,28 @@ class FeatureCache:
             cached = self._redis_get(entity_id)
             if cached is not None:
                 m.CACHE_HITS.inc()
-                return cached
+                cached_dict = dict(cached)
+                cached_dict["source"] = "cache"
+                return cached_dict
         m.CACHE_MISSES.inc()
 
         row = self._pg_get(entity_id)
         if row and self.cache_enabled and self._redis:
-            self._redis_set(entity_id, row)
+            # Store in cache without source field
+            to_cache = {
+                "entity_id": row["entity_id"],
+                "event_id": row["event_id"],
+                "timestamp": row["timestamp"],
+                "feature_vector": row["feature_vector"],
+            }
+            self._redis_set(entity_id, to_cache)
         if row is None:
             m.FEATURES_NOT_FOUND.inc()
-        return row
+            return None
+
+        row_dict = dict(row)
+        row_dict["source"] = "database"
+        return row_dict
 
     # ------------------------------------------------------------------
     # Batch lookup
@@ -133,7 +146,9 @@ class FeatureCache:
                 values = pipe.execute()
                 for eid, val in zip(entity_ids, values):
                     if val is not None:
-                        results[eid] = json.loads(val)
+                        item = json.loads(val)
+                        item["source"] = "cache"
+                        results[eid] = item
                         m.CACHE_HITS.inc()
                     else:
                         cache_misses.append(eid)
@@ -153,9 +168,15 @@ class FeatureCache:
                 try:
                     pipe = self._redis.pipeline(transaction=False)
                     for eid, row in pg_rows.items():
+                        to_cache = {
+                            "entity_id": row["entity_id"],
+                            "event_id": row["event_id"],
+                            "timestamp": row["timestamp"],
+                            "feature_vector": row["feature_vector"],
+                        }
                         pipe.set(
                             f"entity:features:{eid}",
-                            json.dumps(row),
+                            json.dumps(to_cache),
                             ex=self.ttl_seconds,
                         )
                     pipe.execute()
@@ -163,8 +184,13 @@ class FeatureCache:
                     logger.warning(f"Redis cache repopulation failed: {e}")
 
             for eid in cache_misses:
-                results[eid] = pg_rows.get(eid)
-                if results[eid] is None:
+                row = pg_rows.get(eid)
+                if row is not None:
+                    row_dict = dict(row)
+                    row_dict["source"] = "database"
+                    results[eid] = row_dict
+                else:
+                    results[eid] = None
                     m.FEATURES_NOT_FOUND.inc()
 
         return results
