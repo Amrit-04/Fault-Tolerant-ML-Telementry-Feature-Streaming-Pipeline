@@ -6,6 +6,7 @@ services:
     image: confluentinc/cp-kafka:7.6.0
     hostname: kafka
     container_name: kafka
+    user: "0:0"
     ports:
       - "9092:9092"
       - "9101:9101"
